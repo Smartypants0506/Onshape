@@ -1,6 +1,10 @@
 #include <GL/glut.h>
 #include <iostream>
 #include <glm/glm.hpp>
+#include <windows.h>
+#define SCREEN_WIDTH GetSystemMetrics(SM_CXSCREEN)
+#define SCREEN_HEIGHT GetSystemMetrics(SM_CYSCREEN)
+
 
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);  // Clear the screen
@@ -18,23 +22,15 @@ void display() {
     glutSwapBuffers();
 }
 
-void initializeGL() {
 
-    // Print OpenGL version and renderer information
-    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
-    std::cout << "GL Vendor: " << glGetString(GL_VENDOR) << std::endl;
-    std::cout << "GL Renderer: " << glGetString(GL_RENDERER) << std::endl;
-    std::cout << glm::acos(3) << std::endl;
-}
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv){
+    std::cout << SCREEN_WIDTH << " x " << SCREEN_HEIGHT << std::endl;
     // Initialize GLUT
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);  // Double buffer and RGB color mode
-    glutInitWindowSize(800, 600);  // Window size
-    glutCreateWindow("GLUT & GLEW Test");  // Create the window
-
-    initializeGL();  // Initialize GLEW and print OpenGL info
+    glutInitWindowSize(SCREEN_WIDTH/2, SCREEN_HEIGHT/2);  // Window size
+    glutCreateWindow("Onshaper");  // Create the window
 
     // Register the display function
     glutDisplayFunc(display);
