@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 add_executable(Onshaper main.cpp)
 
+find_package(OpenGL REQUIRED)
 
 include(FetchContent)
 
