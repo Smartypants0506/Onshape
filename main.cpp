@@ -14,33 +14,32 @@ float cameraElevation = 30.0f;
 float panX = 0.0f, panY = 0.0f;
 bool rotating = false;
 bool panning = false;
-
-float objectPosX = 0.0f, objectPosY = 0.0f, objectPosZ = 0.0f;
-bool isDragging = false;
 int lastX = 0, lastY = 0;
 
 class RectangularPrism {
 public:
     float lx = 2.0f, ly = 1.0f, lz = 3.0f;
+    float objectPosX = 0.0f, objectPosY = 0.0f, objectPosZ = 0.0f;
+    bool isDragging = false;
     bool solid = false;
 
     RectangularPrism(float lengthX, float lengthY, float lengthZ, bool solid) {
-        this->lx = lengthX;
-        this->ly = lengthY;
-        this->lz = lengthZ;
-        this->solid = solid;
+        this -> lx = lengthX;
+        this -> ly = lengthY;
+        this -> lz = lengthZ;
+        this -> solid = solid;
     }
 
     RectangularPrism(float lengthX, float lengthY, float lengthZ) {
-        this->lx = lengthX;
-        this->ly = lengthY;
-        this->lz = lengthZ;
-        this->solid = false;
+        this -> lx = lengthX;
+        this -> ly = lengthY;
+        this -> lz = lengthZ;
+        this -> solid = false;
     }
 
     RectangularPrism() {
-        this->lx = 1.0f, this->ly = 1.0f, this->lz = 1.0f;
-        this->solid = false;
+        this -> lx = 1.0f, this -> ly = 1.0f, this -> lz = 1.0f;
+        this -> solid = false;
     }
 
     vector<pair<float, float>> getScreenCoordinates() {
@@ -140,7 +139,7 @@ public:
 RectangularPrism* prism = new RectangularPrism(1.0f, 2.0f, 3.0f, false);
 
 bool isPointInsideObject(int mouseX, int mouseY) {
-    auto screenCoords = prism->getScreenCoordinates();
+    auto screenCoords = prism -> getScreenCoordinates();
 
     float minX = FLT_MAX, maxX = -FLT_MAX;
     float minY = FLT_MAX, maxY = -FLT_MAX;
@@ -163,7 +162,7 @@ void init(){
 void updateCamera(){
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef(objectPosX, objectPosY, objectPosZ);
+    glTranslatef(prism -> objectPosX, prism -> objectPosY, prism -> objectPosX);
 
     float eyeX = cameraDistance * cos(cameraElevation * M_PI / 180.0) * sin(cameraAzimuth * M_PI / 180.0);
     float eyeY = cameraDistance * sin(cameraElevation * M_PI / 180.0);
@@ -179,7 +178,7 @@ void display(){
 
     updateCamera();
     glColor3f(1.0, 1.0, 1.0);
-    prism->drawPrism();
+    prism -> drawPrism();
 
     glutSwapBuffers();
 }
@@ -204,15 +203,15 @@ void mouseMotion(int x, int y){
         panX -= (x - lastX) * 0.01f;
         panY += (y - lastY) * 0.01f;
     }
-    if (isDragging) {
+    if (prism -> isDragging) {
         int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
         int invertedY = windowHeight - y;
 
         float dx = (x - lastX) * 0.0125f;
         float dy = -(invertedY - lastY) * 0.0125f;
 
-        objectPosX += dx;
-        objectPosY += dy;
+        prism -> objectPosX += dx;
+        prism -> objectPosY -= dy;
 
         lastX = x;
         lastY = invertedY;
@@ -250,12 +249,12 @@ void mouse(int button, int state, int x, int y){
         int invertedY = windowHeight - y;
 
         if (isPointInsideObject(x, invertedY)) {
-            isDragging = true;
+            prism -> isDragging = true;
             lastX = x;
             lastY = invertedY;
         }
     } else if (state == GLUT_UP) {
-        isDragging = false;
+        prism -> isDragging = false;
     }
 
     lastX = x;
@@ -326,7 +325,7 @@ int main(int argc, char** argv){
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(800, 600);
-    glutCreateWindow("Mouse Interaction");
+    glutCreateWindow("Onshaper");
 
     init();
     glutDisplayFunc(display);
