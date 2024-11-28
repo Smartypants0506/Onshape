@@ -1,9 +1,12 @@
 #include <GL/freeglut.h>
 #include <cmath>
 #include <iostream>
+#include <vector>
+#include <utility>
+#include <algorithm>
+#include <cfloat>
 
 using namespace std;
-float lengthX = 2.0f, lengthY = 1.0f, lengthZ = 3.0f;
 
 float cameraDistance = 5.0f;
 float cameraAzimuth = 45.0f;
@@ -16,6 +19,141 @@ float objectPosX = 0.0f, objectPosY = 0.0f, objectPosZ = 0.0f;
 bool isDragging = false;
 int lastX = 0, lastY = 0;
 
+class RectangularPrism {
+public:
+    float lx = 2.0f, ly = 1.0f, lz = 3.0f;
+    bool solid = false;
+
+    RectangularPrism(float lengthX, float lengthY, float lengthZ, bool solid) {
+        this->lx = lengthX;
+        this->ly = lengthY;
+        this->lz = lengthZ;
+        this->solid = solid;
+    }
+
+    RectangularPrism(float lengthX, float lengthY, float lengthZ) {
+        this->lx = lengthX;
+        this->ly = lengthY;
+        this->lz = lengthZ;
+        this->solid = false;
+    }
+
+    RectangularPrism() {
+        this->lx = 1.0f, this->ly = 1.0f, this->lz = 1.0f;
+        this->solid = false;
+    }
+
+    vector<pair<float, float>> getScreenCoordinates() {
+        float vertices[8][3] = {
+            {-lx / 2, -ly / 2, -lz / 2}, {lx / 2, -ly / 2, -lz / 2},
+            {lx / 2, ly / 2, -lz / 2}, {-lx / 2, ly / 2, -lz / 2},
+            {-lx / 2, -ly / 2, lz / 2}, {lx / 2, -ly / 2, lz / 2},
+            {lx / 2, ly / 2, lz / 2}, {-lx / 2, ly / 2, lz / 2}
+        };
+
+        vector<pair<float, float>> screenCoordinates;
+        GLdouble modelView[16], projection[16];
+        GLint viewport[4];
+
+        glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+        glGetDoublev(GL_PROJECTION_MATRIX, projection);
+        glGetIntegerv(GL_VIEWPORT, viewport);
+
+        for (int i = 0; i < 8; ++i) {
+            GLdouble winX, winY, winZ;
+            if (gluProject(vertices[i][0] + objectPosX, vertices[i][1] + objectPosY, vertices[i][2] + objectPosZ,
+                           modelView, projection, viewport,
+                           &winX, &winY, &winZ)) {
+                screenCoordinates.emplace_back(winX, winY);
+                           }
+        }
+
+        return screenCoordinates;
+    }
+
+    void drawPrism() {
+        float vertices[8][3] = {
+            {-lx / 2, -ly / 2, -lz / 2}, {lx / 2, -ly / 2, -lz / 2},
+            {lx / 2, ly / 2, -lz / 2}, {-lx / 2, ly / 2, -lz / 2},
+            {-lx / 2, -ly / 2, lz / 2}, {lx / 2, -ly / 2, lz / 2},
+            {lx / 2, ly / 2, lz / 2}, {-lx / 2, ly / 2, lz / 2}
+        };
+
+        int edges[12][2] = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0},
+            {4, 5}, {5, 6}, {6, 7}, {7, 4},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+        };
+
+        if (solid) {
+            // Draw solid prism using quads
+            glBegin(GL_QUADS);
+
+            // Front face
+            glVertex3fv(vertices[0]);
+            glVertex3fv(vertices[1]);
+            glVertex3fv(vertices[5]);
+            glVertex3fv(vertices[4]);
+
+            // Back face
+            glVertex3fv(vertices[3]);
+            glVertex3fv(vertices[2]);
+            glVertex3fv(vertices[6]);
+            glVertex3fv(vertices[7]);
+
+            // Left face
+            glVertex3fv(vertices[0]);
+            glVertex3fv(vertices[3]);
+            glVertex3fv(vertices[7]);
+            glVertex3fv(vertices[4]);
+
+            // Right face
+            glVertex3fv(vertices[1]);
+            glVertex3fv(vertices[2]);
+            glVertex3fv(vertices[6]);
+            glVertex3fv(vertices[5]);
+
+            // Top face
+            glVertex3fv(vertices[4]);
+            glVertex3fv(vertices[5]);
+            glVertex3fv(vertices[6]);
+            glVertex3fv(vertices[7]);
+
+            // Bottom face
+            glVertex3fv(vertices[0]);
+            glVertex3fv(vertices[1]);
+            glVertex3fv(vertices[2]);
+            glVertex3fv(vertices[3]);
+        }
+
+        else {
+            glBegin(GL_LINES);
+            for (int i = 0; i < 12; ++i) {
+                glVertex3fv(vertices[edges[i][0]]);
+                glVertex3fv(vertices[edges[i][1]]);
+            }
+            glEnd();
+        }
+    }
+};
+
+RectangularPrism* prism = new RectangularPrism(1.0f, 2.0f, 3.0f, false);
+
+bool isPointInsideObject(int mouseX, int mouseY) {
+    auto screenCoords = prism->getScreenCoordinates();
+
+    float minX = FLT_MAX, maxX = -FLT_MAX;
+    float minY = FLT_MAX, maxY = -FLT_MAX;
+
+    for (const auto& coord : screenCoords) {
+        minX = std::min(minX, coord.first);
+        maxX = std::max(maxX, coord.first);
+        minY = std::min(minY, coord.second);
+        maxY = std::max(maxY, coord.second);
+    }
+
+    return mouseX >= minX && mouseX <= maxX && mouseY >= minY && mouseY <= maxY;
+}
 
 void init(){
     glEnable(GL_DEPTH_TEST);
@@ -36,36 +174,12 @@ void updateCamera(){
               0.0, 1.0, 0.0);
 }
 
-
-void drawWirePrism(float lx, float ly, float lz){
-    float vertices[8][3] = {
-            {-lx / 2, -ly / 2, -lz / 2}, {lx / 2, -ly / 2, -lz / 2},
-            {lx / 2, ly / 2, -lz / 2}, {-lx / 2, ly / 2, -lz / 2},
-            {-lx / 2, -ly / 2, lz / 2}, {lx / 2, -ly / 2, lz / 2},
-            {lx / 2, ly / 2, lz / 2}, {-lx / 2, ly / 2, lz / 2}
-        };
-
-    int edges[12][2] = {
-            {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4},
-            {0, 4}, {1, 5}, {2, 6}, {3, 7}
-        };
-
-    glBegin(GL_LINES);
-    for (int i = 0; i < 12; ++i){
-        glVertex3fv(vertices[edges[i][0]]);
-        glVertex3fv(vertices[edges[i][1]]);
-    }
-    glEnd();
-}
-
 void display(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     updateCamera();
-
     glColor3f(1.0, 1.0, 1.0);
-    drawWirePrism(lengthX, lengthY, lengthZ);
-    //glutSolidSphere(3.0, 20, 20);
+    prism->drawPrism();
 
     glutSwapBuffers();
 }
@@ -90,12 +204,22 @@ void mouseMotion(int x, int y){
         panX -= (x - lastX) * 0.01f;
         panY += (y - lastY) * 0.01f;
     }
-    else if (isDragging){
+    if (isDragging) {
+        int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
+        int invertedY = windowHeight - y;
+
         float dx = (x - lastX) * 0.0125f;
-        float dy = -(y - lastY) * 0.0125f;
+        float dy = -(invertedY - lastY) * 0.0125f;
 
         objectPosX += dx;
         objectPosY += dy;
+
+        lastX = x;
+        lastY = invertedY;
+
+        glutPostRedisplay();
+
+        return void();
     }
 
     lastX = x;
@@ -121,18 +245,17 @@ void mouse(int button, int state, int x, int y){
             panning = false;
         }
     }
-    if (button == GLUT_LEFT_BUTTON){
-        if (state == GLUT_DOWN){
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
+        int invertedY = windowHeight - y;
+
+        if (isPointInsideObject(x, invertedY)) {
             isDragging = true;
             lastX = x;
-            lastY = y;
+            lastY = invertedY;
         }
-        else{
-            isDragging = false;
-        }
-        lastX = x;
-        lastY = glutGet(GLUT_WINDOW_HEIGHT) - y;
-        return void();
+    } else if (state == GLUT_UP) {
+        isDragging = false;
     }
 
     lastX = x;
